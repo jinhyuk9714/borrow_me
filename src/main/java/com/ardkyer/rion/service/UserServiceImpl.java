@@ -129,6 +129,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean isEmailVerified(String email) {
         return emailVerificationRepository.findByEmail(email)
                 .map(EmailVerification::isVerified)
@@ -175,28 +176,33 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public User findByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found: " + id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> getUserById(Long id) {
         return userRepository.findById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> getUserByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
@@ -214,6 +220,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<User> getTopUsersByFollowerCount(int limit) {
         return userRepository.findTopUsersByFollowerCount(limit);
     }

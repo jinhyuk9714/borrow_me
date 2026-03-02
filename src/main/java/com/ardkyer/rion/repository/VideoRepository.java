@@ -33,6 +33,18 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v FROM Video v ORDER BY v.createdAt DESC")
     List<Video> findRecentVideos(Pageable pageable);
 
+    // 배치 조회: 여러 사용자의 최근 비디오
+    @Query("SELECT v FROM Video v WHERE v.user IN :users ORDER BY v.createdAt DESC")
+    List<Video> findByUserInOrderByCreatedAtDesc(List<User> users, Pageable pageable);
+
+    // JOIN FETCH: 비디오 + 사용자 + 해시태그 (N+1 방지)
+    @Query("SELECT DISTINCT v FROM Video v LEFT JOIN FETCH v.user LEFT JOIN FETCH v.hashtags")
+    List<Video> findAllWithUserAndHashtags();
+
+    // JOIN FETCH: 비디오 + 댓글 (N+1 방지)
+    @Query("SELECT DISTINCT v FROM Video v LEFT JOIN FETCH v.comments ORDER BY v.createdAt DESC")
+    List<Video> findAllWithComments();
+
     // 예약 시 Pessimistic Lock
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT v FROM Video v WHERE v.id = :id")

@@ -77,14 +77,27 @@ public class VideoServiceImpl implements VideoService {
     }
 
     private Set<Hashtag> convertNamesToHashtags(Set<String> hashtagNames) {
-        return hashtagNames.stream()
-                .map(name -> hashtagRepository.findByName(name)
-                        .orElseGet(() -> {
-                            Hashtag newHashtag = new Hashtag();
-                            newHashtag.setName(name);
-                            return hashtagRepository.save(newHashtag);
-                        }))
-                .collect(Collectors.toSet());
+        if (hashtagNames.isEmpty()) return Collections.emptySet();
+
+        // 일괄 조회로 N+1 방지
+        List<Hashtag> existing = hashtagRepository.findByNameIn(hashtagNames);
+        Map<String, Hashtag> existingMap = existing.stream()
+                .collect(Collectors.toMap(Hashtag::getName, h -> h));
+
+        Set<Hashtag> result = new HashSet<>(existing);
+        List<Hashtag> newHashtags = hashtagNames.stream()
+                .filter(name -> !existingMap.containsKey(name))
+                .map(name -> {
+                    Hashtag newHashtag = new Hashtag();
+                    newHashtag.setName(name);
+                    return newHashtag;
+                })
+                .collect(Collectors.toList());
+
+        if (!newHashtags.isEmpty()) {
+            result.addAll(hashtagRepository.saveAll(newHashtags));
+        }
+        return result;
     }
 
     @Override
@@ -132,10 +145,13 @@ public class VideoServiceImpl implements VideoService {
     }
 
     @Override
+    public List<Video> getAllVideosWithDetails() {
+        return videoRepository.findAllWithUserAndHashtags();
+    }
+
+    @Override
     public List<Video> getAllVideosWithComments() {
-        List<Video> videos = videoRepository.findAll();
-        videos.forEach(video -> video.getComments().size()); // Fetch comments
-        return videos;
+        return videoRepository.findAllWithComments();
     }
 
     @Override
@@ -203,6 +219,12 @@ public class VideoServiceImpl implements VideoService {
     @Override
     public List<Video> getRecentVideosByUser(User user, int limit) {
         return videoRepository.findByUserOrderByCreatedAtDesc(user, PageRequest.of(0, limit));
+    }
+
+    @Override
+    public List<Video> getRecentVideosByUsers(List<User> users, int limit) {
+        if (users.isEmpty()) return Collections.emptyList();
+        return videoRepository.findByUserInOrderByCreatedAtDesc(users, PageRequest.of(0, users.size() * limit));
     }
 
     @Override

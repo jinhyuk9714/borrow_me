@@ -72,11 +72,13 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Reservation> getUserReservations(User user) {
         return reservationRepository.findByUser(user);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Reservation> getVideoReservations(Video video) {
         return reservationRepository.findByVideo(video);
     }
@@ -97,6 +99,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean canReserve(Video video, int quantity) {
         return video.getAvailableQuantity() >= quantity &&
                 video.getReservationStatus() != Video.ReservationStatus.OUT_OF_STOCK;

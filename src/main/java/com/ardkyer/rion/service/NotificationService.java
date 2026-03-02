@@ -68,6 +68,11 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
+    @Transactional(readOnly = true)
+    public List<Notification> getNotificationsForUser(User user) {
+        return notificationRepository.findByUserOrderByCreatedAtDesc(user);
+    }
+
     public void deleteReadNotifications(User user) {
         List<Notification> readNotifications = notificationRepository.findByUserAndIsReadTrue(user);
         notificationRepository.deleteAll(readNotifications);

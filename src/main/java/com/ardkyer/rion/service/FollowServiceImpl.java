@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,6 +43,13 @@ public class FollowServiceImpl implements FollowService {
     @Override
     public boolean isFollowing(User follower, User followed) {
         return followRepository.existsByFollowerAndFollowed(follower, followed);
+    }
+
+    @Override
+    public Set<Long> getFollowedUserIds(User follower, List<User> candidates) {
+        return followRepository.findByFollowerAndFollowedIn(follower, candidates).stream()
+                .map(follow -> follow.getFollowed().getId())
+                .collect(Collectors.toSet());
     }
 
     @Override

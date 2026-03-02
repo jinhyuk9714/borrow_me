@@ -66,9 +66,19 @@ public class ProductController {
     @GetMapping
     @Operation(summary = "List all products", description = "Retrieves a list of all available products")
     public ResponseEntity<List<ProductResponse>> getProducts(Authentication authentication) {
-        List<Video> videos = videoService.getAllVideos();
+        List<Video> videos = videoService.getAllVideosWithDetails();
+
+        // 팔로우 상태 사전 로딩 (N+1 방지)
+        Set<Long> followedUserIds = Collections.emptySet();
+        if (authentication != null) {
+            User currentUser = userService.findByUsername(authentication.getName());
+            List<User> videoOwners = videos.stream().map(Video::getUser).distinct().collect(Collectors.toList());
+            followedUserIds = followService.getFollowedUserIds(currentUser, videoOwners);
+        }
+
+        final Set<Long> finalFollowedIds = followedUserIds;
         List<ProductResponse> response = videos.stream()
-                .map(video -> convertToProductResponse(video, authentication))
+                .map(video -> convertToProductResponse(video, finalFollowedIds))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
@@ -94,6 +104,10 @@ public class ProductController {
             Authentication authentication) throws IOException {
 
         if (!file.getContentType().startsWith("image/")) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (totalQuantity == null || totalQuantity <= 0) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -224,6 +238,15 @@ public class ProductController {
     }
 
     private ProductResponse convertToProductResponse(Video video, Authentication authentication) {
+        Set<Long> followedIds = Collections.emptySet();
+        if (authentication != null) {
+            User currentUser = userService.findByUsername(authentication.getName());
+            followedIds = followService.getFollowedUserIds(currentUser, List.of(video.getUser()));
+        }
+        return convertToProductResponse(video, followedIds);
+    }
+
+    private ProductResponse convertToProductResponse(Video video, Set<Long> followedUserIds) {
         ProductResponse response = new ProductResponse();
         response.setId(video.getId());
         response.setTitle(video.getTitle());
@@ -232,13 +255,11 @@ public class ProductController {
         response.setAvailableQuantity(video.getAvailableQuantity());
         response.setStatus(video.getReservationStatus().name());
 
-        // Convert Hashtag entities to strings
         List<String> hashtagStrings = video.getHashtags().stream()
                 .map(Hashtag::getName)
                 .collect(Collectors.toList());
         response.setHashtags(hashtagStrings);
 
-        // Use the correct method name for getting image file name
         response.setImageUrl("/api/products/images/" + video.getImageUrl());
 
         ProductResponse.UserInfo userInfo = new ProductResponse.UserInfo();
@@ -246,10 +267,7 @@ public class ProductController {
         userInfo.setUsername(video.getUser().getUsername());
         response.setUser(userInfo);
 
-        if (authentication != null) {
-            User currentUser = userService.findByUsername(authentication.getName());
-            response.setFollowedByCurrentUser(followService.isFollowing(currentUser, video.getUser()));
-        }
+        response.setFollowedByCurrentUser(followedUserIds.contains(video.getUser().getId()));
 
         return response;
     }

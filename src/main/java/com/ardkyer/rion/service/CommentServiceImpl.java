@@ -2,6 +2,7 @@ package com.ardkyer.rion.service;
 
 import com.ardkyer.rion.entity.*;
 import com.ardkyer.rion.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @Transactional
 public class CommentServiceImpl implements CommentService {
@@ -31,9 +33,9 @@ public class CommentServiceImpl implements CommentService {
         Comment savedComment = commentRepository.save(comment);
 
         if (savedComment.getVideo() != null) {
-            System.out.println("비디오 ID: " + savedComment.getVideo().getId());
+            log.debug("비디오 ID: {}", savedComment.getVideo().getId());
         } else {
-            System.out.println("비디오가 null입니다.");
+            log.debug("비디오가 null입니다.");
         }
 
         // 자신의 게시물이 아닐 경우에만 알림 생성

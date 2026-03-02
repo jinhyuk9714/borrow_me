@@ -23,8 +23,10 @@ public interface VideoService {
 
     // 조회 메서드
     List<Video> getAllVideos();
+    List<Video> getAllVideosWithDetails();
     List<Video> getVideosByUser(User user);
     List<Video> getRecentVideosByUser(User user, int limit);
+    List<Video> getRecentVideosByUsers(List<User> users, int limit);
     List<Video> getRandomRecentVideos(int count);
 
     // 예약 관련 메서드

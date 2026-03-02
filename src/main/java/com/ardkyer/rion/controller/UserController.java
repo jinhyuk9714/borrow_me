@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import com.ardkyer.rion.dto.request.LoginRequest;
 import com.ardkyer.rion.dto.request.SignupRequest;
@@ -31,7 +32,7 @@ public class UserController {
 
     @PostMapping("/auth/login")
     @Operation(summary = "User login", description = "Authenticate user and return JWT token")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
             LoginResponse response = userService.login(request);
             return ResponseEntity.ok(response);
@@ -42,7 +43,7 @@ public class UserController {
 
     @PostMapping("/auth/register")
     @Operation(summary = "Register new user")
-    public ResponseEntity<?> register(@RequestBody SignupRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody SignupRequest request) {
         try {
             UserResponse response = userService.registerUser(request);
             return ResponseEntity.ok(response);

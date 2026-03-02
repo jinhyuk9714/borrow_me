@@ -30,8 +30,15 @@ public class ReplyController {
 
         Map<String, Object> response = new HashMap<>();
         try {
+            String content = request.get("content");
+            if (content == null || content.isBlank()) {
+                response.put("success", false);
+                response.put("message", "Reply content cannot be empty");
+                return ResponseEntity.badRequest().body(response);
+            }
+
             User user = userService.findByUsername(authentication.getName());
-            Reply reply = replyService.addReply(commentId, request.get("content"), user);
+            Reply reply = replyService.addReply(commentId, content, user);
 
             // 응답 데이터 직접 구성
             Map<String, Object> replyData = new HashMap<>();

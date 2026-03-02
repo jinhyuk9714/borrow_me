@@ -1,6 +1,8 @@
 //User.java
 package com.ardkyer.rion.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,6 +16,7 @@ import java.util.Set;
 @Entity
 @Table(name = "user")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@JsonIgnoreProperties({"videos", "comments", "likes", "following", "followers", "hibernateLazyInitializer"})
 public class User implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -28,6 +31,7 @@ public class User implements Serializable {
     private String email;
 
     @Column()
+    @JsonIgnore
     private String passwordHash;
 
     @Transient // DB에 저장되지 않는 임시 필드
@@ -49,9 +53,11 @@ public class User implements Serializable {
     private boolean emailVerified = false;
 
     @Column(name = "verification_token")
+    @JsonIgnore
     private String verificationToken;
 
     @Column(name = "verification_token_expiry")
+    @JsonIgnore
     private LocalDateTime verificationTokenExpiry;
 
     @ElementCollection(fetch = FetchType.EAGER)

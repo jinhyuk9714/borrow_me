@@ -45,6 +45,9 @@ public class FollowController {
 
     @DeleteMapping
     public ResponseEntity<?> unfollowUser(@RequestParam Long followedId, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         try {
             String username = ((UserDetails) authentication.getPrincipal()).getUsername();
             User follower = userService.findByUsername(username);
