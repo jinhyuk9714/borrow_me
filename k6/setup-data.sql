@@ -4,12 +4,12 @@
 -- =============================================================
 
 -- 기존 테스트 데이터 정리
-DELETE FROM video_hashtags WHERE video_id IN (SELECT id FROM videos WHERE title LIKE 'k6_test_%');
-DELETE FROM reservations WHERE video_id IN (SELECT id FROM videos WHERE title LIKE 'k6_test_%');
+DELETE FROM product_hashtags WHERE product_id IN (SELECT id FROM products WHERE title LIKE 'k6_test_%');
+DELETE FROM reservations WHERE product_id IN (SELECT id FROM products WHERE title LIKE 'k6_test_%');
 DELETE FROM follows WHERE follower_id IN (SELECT id FROM user WHERE email LIKE 'k6_%@test.com');
 DELETE FROM follows WHERE followed_id IN (SELECT id FROM user WHERE email LIKE 'k6_%@test.com');
 DELETE FROM recent_search WHERE user_id IN (SELECT id FROM user WHERE email LIKE 'k6_%@test.com');
-DELETE FROM videos WHERE title LIKE 'k6_test_%';
+DELETE FROM products WHERE title LIKE 'k6_test_%';
 DELETE FROM user_roles WHERE user_id IN (SELECT id FROM user WHERE email LIKE 'k6_%@test.com');
 DELETE FROM user WHERE email LIKE 'k6_%@test.com';
 
@@ -63,7 +63,7 @@ INSERT IGNORE INTO hashtags (name) VALUES
 -- =============================================================
 
 -- 동시 예약 테스트용 상품 (owner1 소유, 재고 50)
-INSERT INTO videos (user_id, title, description, video_url, total_quantity, available_quantity, reservation_status, created_at, updated_at)
+INSERT INTO products (user_id, title, description, image_url, total_quantity, available_quantity, reservation_status, created_at, updated_at)
 SELECT id, 'k6_test_concurrent_reserve', '동시 예약 테스트용 상품 #sports #popular', 'k6-test-image.jpg', 50, 50, 'AVAILABLE', NOW(), NOW()
 FROM user WHERE email = 'k6_owner1@test.com';
 
@@ -76,7 +76,7 @@ BEGIN
   DECLARE owner_id BIGINT;
   SELECT id INTO owner_id FROM user WHERE email = 'k6_owner1@test.com';
   WHILE i <= 50 DO
-    INSERT INTO videos (user_id, title, description, video_url, total_quantity, available_quantity, reservation_status, created_at, updated_at)
+    INSERT INTO products (user_id, title, description, image_url, total_quantity, available_quantity, reservation_status, created_at, updated_at)
     VALUES (owner_id, CONCAT('k6_test_product_', i), CONCAT('테스트 상품 설명 ', i, ' #sports #camping'), 'k6-test-image.jpg', 10, 10, 'AVAILABLE', NOW(), NOW());
     SET i = i + 1;
   END WHILE;
@@ -94,7 +94,7 @@ BEGIN
   DECLARE owner_id BIGINT;
   SELECT id INTO owner_id FROM user WHERE email = 'k6_owner2@test.com';
   WHILE i <= 100 DO
-    INSERT INTO videos (user_id, title, description, video_url, total_quantity, available_quantity, reservation_status, created_at, updated_at)
+    INSERT INTO products (user_id, title, description, image_url, total_quantity, available_quantity, reservation_status, created_at, updated_at)
     VALUES (owner_id, CONCAT('k6_test_product_', i), CONCAT('테스트 상품 설명 ', i, ' #hiking #photography'), 'k6-test-image.jpg', 10, 10, 'AVAILABLE', NOW(), NOW());
     SET i = i + 1;
   END WHILE;
@@ -106,25 +106,25 @@ DROP PROCEDURE IF EXISTS create_k6_products_owner2;
 -- =============================================================
 -- 4. 상품-해시태그 관계
 -- =============================================================
-INSERT INTO video_hashtags (video_id, hashtag_id)
-SELECT v.id, h.id FROM videos v, hashtags h
-WHERE v.title LIKE 'k6_test_%' AND h.name = 'popular';
+INSERT INTO product_hashtags (product_id, hashtag_id)
+SELECT p.id, h.id FROM products p, hashtags h
+WHERE p.title LIKE 'k6_test_%' AND h.name = 'popular';
 
-INSERT INTO video_hashtags (video_id, hashtag_id)
-SELECT v.id, h.id FROM videos v, hashtags h
-WHERE v.title LIKE 'k6_test_%' AND h.name = 'sports' AND v.id % 2 = 0;
+INSERT INTO product_hashtags (product_id, hashtag_id)
+SELECT p.id, h.id FROM products p, hashtags h
+WHERE p.title LIKE 'k6_test_%' AND h.name = 'sports' AND p.id % 2 = 0;
 
-INSERT INTO video_hashtags (video_id, hashtag_id)
-SELECT v.id, h.id FROM videos v, hashtags h
-WHERE v.title LIKE 'k6_test_%' AND h.name = 'camping' AND v.id % 3 = 0;
+INSERT INTO product_hashtags (product_id, hashtag_id)
+SELECT p.id, h.id FROM products p, hashtags h
+WHERE p.title LIKE 'k6_test_%' AND h.name = 'camping' AND p.id % 3 = 0;
 
-INSERT INTO video_hashtags (video_id, hashtag_id)
-SELECT v.id, h.id FROM videos v, hashtags h
-WHERE v.title LIKE 'k6_test_%' AND h.name = 'hiking' AND v.id % 4 = 0;
+INSERT INTO product_hashtags (product_id, hashtag_id)
+SELECT p.id, h.id FROM products p, hashtags h
+WHERE p.title LIKE 'k6_test_%' AND h.name = 'hiking' AND p.id % 4 = 0;
 
-INSERT INTO video_hashtags (video_id, hashtag_id)
-SELECT v.id, h.id FROM videos v, hashtags h
-WHERE v.title LIKE 'k6_test_%' AND h.name = 'photography' AND v.id % 5 = 0;
+INSERT INTO product_hashtags (product_id, hashtag_id)
+SELECT p.id, h.id FROM products p, hashtags h
+WHERE p.title LIKE 'k6_test_%' AND h.name = 'photography' AND p.id % 5 = 0;
 
 -- =============================================================
 -- 5. 팔로우 관계
@@ -149,10 +149,10 @@ AND o.email = 'k6_owner2@test.com';
 SELECT '--- k6 테스트 데이터 시딩 완료 ---' AS status;
 SELECT 'Users' AS entity, COUNT(*) AS count FROM user WHERE email LIKE 'k6_%@test.com'
 UNION ALL
-SELECT 'Products', COUNT(*) FROM videos WHERE title LIKE 'k6_test_%'
+SELECT 'Products', COUNT(*) FROM products WHERE title LIKE 'k6_test_%'
 UNION ALL
 SELECT 'Hashtags', COUNT(*) FROM hashtags
 UNION ALL
-SELECT 'Video-Hashtag Links', COUNT(*) FROM video_hashtags vh JOIN videos v ON vh.video_id = v.id WHERE v.title LIKE 'k6_test_%'
+SELECT 'Product-Hashtag Links', COUNT(*) FROM product_hashtags ph JOIN products p ON ph.product_id = p.id WHERE p.title LIKE 'k6_test_%'
 UNION ALL
 SELECT 'Follows', COUNT(*) FROM follows f JOIN user u ON f.follower_id = u.id WHERE u.email LIKE 'k6_%@test.com';

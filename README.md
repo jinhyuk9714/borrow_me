@@ -32,7 +32,7 @@ Client (React)
 │  Repository Layer  (14개 JPA Repository)      │
 │  - JOIN FETCH, 배치 쿼리, Pessimistic Lock    │
 ├──────────────────────────────────────────────┤
-│  Entity Layer  (16개 Domain Model)            │
+│  Entity Layer  (14개 Domain Model)            │
 │  - JPA 매핑, 연관관계, 상태 관리               │
 └──────────────────────────────────────────────┘
          │                          │
@@ -61,7 +61,7 @@ JwtTokenProvider.validateToken()
 ### 주요 엔티티 관계
 
 ```
-User ──< Video (상품)
+User ──< Product (상품)
  │          │
  │          ├──< Reservation (예약)
  │          ├──< Comment ──< Reply (답글)
@@ -97,10 +97,10 @@ User ──< Video (상품)
 
 ```java
 // Before: 상품마다 개별 팔로우 조회
-List<Video> videos = videoService.getAllVideos();
-videos.stream().map(video -> {
-    boolean isFollowed = followService.isFollowing(currentUser, video.getUser()); // N번
-    return convertToResponse(video, isFollowed);
+List<Product> products = productService.getAllProducts();
+products.stream().map(product -> {
+    boolean isFollowed = followService.isFollowing(currentUser, product.getUser()); // N번
+    return convertToResponse(product, isFollowed);
 });
 ```
 
@@ -110,19 +110,19 @@ videos.stream().map(video -> {
 
 ```java
 // After: JOIN FETCH + 배치 쿼리 → 총 3회 쿼리
-List<Video> videos = videoService.getAllVideosWithDetails(); // JOIN FETCH 1회
+List<Product> products = productService.getAllProductsWithDetails(); // JOIN FETCH 1회
 
 Set<Long> followedUserIds = followService.getFollowedUserIds(
-    currentUser, videoOwners);                               // 배치 쿼리 1회
+    currentUser, owners);                                           // 배치 쿼리 1회
 
-videos.stream().map(video ->
-    convertToProductResponse(video, followedUserIds));        // Set.contains() O(1)
+products.stream().map(product ->
+    convertToProductResponse(product, followedUserIds));             // Set.contains() O(1)
 ```
 
 ```java
 // Repository
-@Query("SELECT DISTINCT v FROM Video v LEFT JOIN FETCH v.user LEFT JOIN FETCH v.hashtags")
-List<Video> findAllWithUserAndHashtags();
+@Query("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.user LEFT JOIN FETCH p.hashtags")
+List<Product> findAllWithUserAndHashtags();
 
 List<Follow> findByFollowerAndFollowedIn(User follower, List<User> followed);
 ```
@@ -153,8 +153,8 @@ List<Follow> findByFollowerAndFollowedIn(User follower, List<User> followed);
 
 ```java
 @Lock(LockModeType.PESSIMISTIC_WRITE)
-@Query("SELECT v FROM Video v WHERE v.id = :id")
-Optional<Video> findByIdForUpdate(Long id);
+@Query("SELECT p FROM Product p WHERE p.id = :id")
+Optional<Product> findByIdForUpdate(Long id);
 ```
 
 ```
@@ -171,13 +171,13 @@ Optional<Video> findByIdForUpdate(Long id);
 
 **문제** — k6 부하 테스트(100명 동시 예약)로 2번 해결책을 검증하던 중, `SELECT FOR UPDATE`가 실제로 실행되지 않아 **100건 전부 성공**하는 현상 발견
 
-**원인** — Spring Boot의 OSIV(`open-in-view=true`)가 기본 활성화되어 Controller ~ Service가 같은 Hibernate Session을 공유. Controller에서 `getVideoById()`로 이미 로딩된 Video가 L1 캐시에 존재하므로, Service의 `findByIdForUpdate()` 호출 시 **DB를 조회하지 않고 캐시된 엔티티를 반환** → `FOR UPDATE` 잠금이 걸리지 않음
+**원인** — Spring Boot의 OSIV(`open-in-view=true`)가 기본 활성화되어 Controller ~ Service가 같은 Hibernate Session을 공유. Controller에서 `getProductById()`로 이미 로딩된 Product가 L1 캐시에 존재하므로, Service의 `findByIdForUpdate()` 호출 시 **DB를 조회하지 않고 캐시된 엔티티를 반환** → `FOR UPDATE` 잠금이 걸리지 않음
 
 ```java
 // Before: L1 캐시로 인해 FOR UPDATE 무시
 @Transactional
-public Reservation reserve(Video video, User user, int quantity) {
-    Video lockedVideo = videoRepository.findByIdForUpdate(video.getId()); // 캐시 반환
+public Reservation reserve(Product product, User user, int quantity) {
+    Product lockedProduct = productRepository.findByIdForUpdate(product.getId()); // 캐시 반환
     // ...
 }
 ```
@@ -187,16 +187,16 @@ public Reservation reserve(Video video, User user, int quantity) {
 ```java
 // After: detach로 캐시 제거 → FOR UPDATE 정상 실행
 @Transactional
-public Reservation reserve(Video video, User user, int quantity) {
-    entityManager.detach(video);
+public Reservation reserve(Product product, User user, int quantity) {
+    entityManager.detach(product);
 
-    Video lockedVideo = videoRepository.findByIdForUpdate(video.getId())
+    Product lockedProduct = productRepository.findByIdForUpdate(product.getId())
             .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
 
-    if (lockedVideo.getAvailableQuantity() < quantity) {
+    if (lockedProduct.getAvailableQuantity() < quantity) {
         throw new IllegalStateException("재고가 부족합니다.");
     }
-    lockedVideo.setAvailableQuantity(lockedVideo.getAvailableQuantity() - quantity);
+    lockedProduct.setAvailableQuantity(lockedProduct.getAvailableQuantity() - quantity);
     // ...
 }
 ```
@@ -259,7 +259,7 @@ if (!newTags.isEmpty()) hashtagRepository.saveAll(newTags);
 
 ```java
 // After
-@JsonIgnoreProperties({"videos", "comments", "likes", "following", "followers"})
+@JsonIgnoreProperties({"products", "comments", "likes", "following", "followers"})
 public class User {
     @JsonIgnore private String passwordHash;
     @JsonIgnore private String verificationToken;
@@ -286,7 +286,7 @@ public class User {
 ## 프로젝트 구조
 
 ```
-src/main/java/com/ardkyer/rion/
+src/main/java/com/ardkyer/borrowme/
 ├── controller/          # REST API 엔드포인트 (13개)
 │   ├── ProductController        - 상품 CRUD + 예약
 │   ├── UserController           - 회원가입, 로그인
@@ -300,10 +300,10 @@ src/main/java/com/ardkyer/rion/
 │   └── ...
 ├── service/             # 비즈니스 로직 (22개)
 ├── repository/          # 데이터 접근 (14개)
-├── entity/              # 도메인 모델 (16개)
-│   ├── User, Video, Reservation, Comment, Reply
+├── entity/              # 도메인 모델 (14개)
+│   ├── User, Product, Reservation, Comment, Reply
 │   ├── Follow, Like, CommentLike, Hashtag
-│   ├── Notification, Exercise, ItemUnit
+│   ├── Notification, Exercise
 │   └── EmailVerification, RecentSearch
 ├── config/              # 설정 (7개)
 │   ├── SecurityConfig           - Spring Security + JWT
@@ -327,7 +327,7 @@ src/main/java/com/ardkyer/rion/
 | 분류 | 기술 |
 |------|------|
 | **Backend** | Spring Boot 3.1.5, Java 17 |
-| **Database** | MySQL 8.0 (운영), H2 (테스트) |
+| **Database** | MySQL 8.0 (운영), Testcontainers MySQL (통합 테스트) |
 | **ORM** | Spring Data JPA, Hibernate |
 | **Security** | Spring Security 6, JWT (jjwt 0.11.5), BCrypt |
 | **Storage** | AWS S3 (Spring Cloud AWS) |
@@ -335,7 +335,7 @@ src/main/java/com/ardkyer/rion/
 | **Documentation** | SpringDoc OpenAPI 3 (Swagger UI) |
 | **Validation** | Jakarta Bean Validation |
 | **Build** | Gradle |
-| **Test** | JUnit 5, H2 인메모리 DB |
+| **Test** | JUnit 5, Testcontainers MySQL, MockMvc |
 | **Load Test** | k6 (동시성 검증, 부하 테스트) |
 
 ---
@@ -359,10 +359,10 @@ export MAIL_PASSWORD=your_app_password
 # 빌드
 ./gradlew build
 
-# 실행
-./gradlew bootRun
+# 실행 (local 프로필)
+./gradlew bootRun --args='--spring.profiles.active=local'
 
-# 테스트 (H2 인메모리 DB 사용)
+# 테스트 (Testcontainers MySQL — Docker 필요)
 ./gradlew test
 ```
 

@@ -50,10 +50,10 @@ k6 run k6/test-search.js
 동시 예약 테스트를 다시 실행하려면 재고를 복구해야 합니다:
 
 ```sql
-UPDATE videos SET available_quantity = 50, reservation_status = 'AVAILABLE'
+UPDATE products SET available_quantity = 50, reservation_status = 'AVAILABLE'
 WHERE title = 'k6_test_concurrent_reserve';
 
-DELETE FROM reservations WHERE video_id = (
-  SELECT id FROM videos WHERE title = 'k6_test_concurrent_reserve'
+DELETE FROM reservations WHERE product_id = (
+  SELECT id FROM products WHERE title = 'k6_test_concurrent_reserve'
 );
 ```
