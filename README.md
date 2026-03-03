@@ -21,7 +21,7 @@ Client (React)
     │
     ▼
 ┌──────────────────────────────────────────────┐
-│  Controller Layer  (13개 REST Controller)     │
+│  Controller Layer  (11개 REST Controller)     │
 │  - 요청/응답 처리, 입력 검증 (@Valid)          │
 │  - 인증/인가 확인                              │
 ├──────────────────────────────────────────────┤
@@ -287,7 +287,7 @@ public class User {
 
 ```
 src/main/java/com/ardkyer/borrowme/
-├── controller/          # REST API 엔드포인트 (13개)
+├── controller/          # REST API 엔드포인트 (11개)
 │   ├── ProductController        - 상품 CRUD + 예약
 │   ├── UserController           - 회원가입, 로그인
 │   ├── FollowController         - 팔로우/언팔로우
