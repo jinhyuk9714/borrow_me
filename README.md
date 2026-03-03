@@ -31,38 +31,48 @@
 ### 레이어드 아키텍처
 
 ```mermaid
-flowchart TD
-    Client["Client (React)"]
+flowchart LR
+    Client["Client\n(React)"]
 
-    subgraph App["Spring Boot Application"]
-        direction TB
-        CL["Controller Layer  (11개 REST Controller)\n요청/응답 처리, 입력 검증 @Valid\n인증/인가 확인"]
-        SL["Service Layer  (22개 Service)\n비즈니스 로직, @Transactional 관리\n읽기 전용: @Transactional(readOnly)"]
-        RL["Repository Layer  (14개 JPA Repository)\nJOIN FETCH, 배치 쿼리, Pessimistic Lock"]
-        EL["Entity Layer  (14개 Domain Model)\nJPA 매핑, 연관관계, 상태 관리"]
-
-        CL --> SL --> RL --> EL
+    subgraph Security["Security"]
+        JWT["JwtAuthFilter\nSecurityConfig"]
     end
 
-    Client --> CL
-    EL --> MySQL[("MySQL 8.0\n상품, 사용자, 예약")]
-    SL --> S3["AWS S3\n상품 이미지"]
+    subgraph App["Spring Boot Application"]
+        C["Controller\n11개"]
+        S["Service\n22개"]
+        R["Repository\n14개"]
+    end
+
+    MySQL[("MySQL 8.0")]
+    S3["AWS S3"]
+
+    Client --> JWT --> C --> S --> R --> MySQL
+    S --> S3
 ```
 
 ### JWT 인증 흐름
 
 ```mermaid
-flowchart TD
-    Request["HTTP Request"]
-    Filter["JwtAuthenticationFilter"]
-    Validate["JwtTokenProvider.validateToken()"]
-    Valid["SecurityContext에 Authentication 설정\nController 진입"]
-    Invalid["401 Unauthorized"]
+sequenceDiagram
+    actor Client
+    participant Filter as JwtAuthenticationFilter
+    participant Provider as JwtTokenProvider
+    participant Context as SecurityContext
+    participant Controller
 
-    Request --> Filter
-    Filter -->|"Authorization: Bearer token"| Validate
-    Validate -->|"유효"| Valid
-    Validate -->|"만료/무효"| Invalid
+    Client->>Filter: HTTP Request (Authorization: Bearer token)
+    Filter->>Provider: validateToken(token)
+
+    alt 유효한 토큰
+        Provider-->>Filter: true
+        Filter->>Context: setAuthentication(auth)
+        Filter->>Controller: 요청 전달
+        Controller-->>Client: 200 OK
+    else 만료 / 무효 토큰
+        Provider-->>Filter: false / exception
+        Filter-->>Client: 401 Unauthorized
+    end
 ```
 
 ### 주요 엔티티 관계
